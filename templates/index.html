@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitguide AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+                "Segoe UI", sans-serif;
+            background: #f4f7f5;
+            color: #18231d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .chatbot {
+            width: min(920px, 100%);
+            height: min(760px, 92vh);
+            background: #ffffff;
+            border: 1px solid #e1e8e3;
+            border-radius: 24px;
+            box-shadow: 0 20px 55px rgba(27, 54, 38, 0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 22px 26px;
+            border-bottom: 1px solid #edf1ee;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            background: #20a36a;
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            line-height: 1.2;
+        }
+
+        .header p {
+            color: #718078;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            background: #fafcfb;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 18px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: min(76%, 680px);
+            padding: 13px 16px;
+            border-radius: 17px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 15px;
+        }
+
+        .message.bot .bubble {
+            background: #ffffff;
+            border: 1px solid #e2e9e4;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.user .bubble {
+            background: #20a36a;
+            color: #ffffff;
+            border-bottom-right-radius: 5px;
+        }
+
+        .typing .bubble {
+            color: #718078;
+            font-style: italic;
+        }
+
+        .composer {
+            padding: 18px 22px 22px;
+            background: #ffffff;
+            border-top: 1px solid #edf1ee;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 52px;
+            max-height: 150px;
+            resize: none;
+            outline: none;
+            border: 1px solid #dce5df;
+            border-radius: 16px;
+            padding: 14px 16px;
+            background: #fbfcfb;
+            color: #18231d;
+            font: inherit;
+        }
+
+        textarea:focus {
+            border-color: #20a36a;
+            box-shadow: 0 0 0 3px rgba(32, 163, 106, 0.10);
+        }
+
+        #sendBtn {
+            width: 52px;
+            height: 52px;
+            border: 0;
+            border-radius: 15px;
+            background: #20a36a;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 20px;
+            transition: 0.2s ease;
+        }
+
+        #sendBtn:hover {
+            background: #178653;
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            margin-top: 10px;
+            text-align: center;
+            color: #89958e;
+            font-size: 12px;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 0;
+            }
+
+            .chatbot {
+                height: 100vh;
+                border: 0;
+                border-radius: 0;
+            }
+
+            .header {
+                padding: 17px;
+            }
+
+            .messages {
+                padding: 20px 15px;
+            }
+
+            .bubble {
+                max-width: 88%;
+            }
+
+            .composer {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="chatbot">
+        <header class="header">
+            <div class="logo">F</div>
+
+            <div>
+                <h1>Fitguide AI</h1>
+                <p>Your focused AI fitness and wellness assistant</p>
+            </div>
+        </header>
+
+        <section class="messages" id="messages" aria-live="polite">
+            <div class="message bot">
+                <div class="bubble">
+                    Hi! I'm Fitguide AI. Ask me about workouts, exercises,
+                    fitness routines, mobility, recovery, or fitness nutrition.
+                </div>
+            </div>
+        </section>
+
+        <footer class="composer">
+            <div class="input-row">
+                <textarea
+                    id="messageInput"
+                    rows="1"
+                    placeholder="Ask about fitness or wellness..."
+                    aria-label="Fitness question"
+                ></textarea>
+
+                <button id="sendBtn" type="button" aria-label="Send message">
+                    ➤
+                </button>
+            </div>
+
+            <div class="hint">
+                Fitguide AI answers fitness and wellness-related questions only.
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function addMessage(text, type) {
+            const wrapper = document.createElement("div");
+            wrapper.className = `message ${type}`;
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.textContent = text;
+
+            wrapper.appendChild(bubble);
+            messages.appendChild(wrapper);
+            messages.scrollTop = messages.scrollHeight;
+
+            return wrapper;
+        }
+
+        function setLoading(loading) {
+            sendBtn.disabled = loading;
+            input.disabled = loading;
+        }
+
+        async function sendMessage() {
+            const message = input.value.trim();
+
+            if (!message || sendBtn.disabled) {
+                return;
+            }
+
+            addMessage(message, "user");
+
+            input.value = "";
+            input.style.height = "auto";
+            setLoading(true);
+
+            const typing = addMessage(
+                "Fitguide AI is thinking...",
+                "bot typing"
+            );
+
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+                typing.remove();
+
+                if (!response.ok) {
+                    addMessage(
+                        data.error || "Something went wrong. Please try again.",
+                        "bot"
+                    );
+                    return;
+                }
+
+                addMessage(data.answer, "bot");
+            } catch (error) {
+                typing.remove();
+
+                addMessage(
+                    "Unable to reach the server. Please check the Flask application.",
+                    "bot"
+                );
+            } finally {
+                setLoading(false);
+                input.focus();
+            }
+        }
+
+        sendBtn.addEventListener("click", sendMessage);
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        input.addEventListener("input", () => {
+            input.style.height = "auto";
+            input.style.height = `${Math.min(input.scrollHeight, 150)}px`;
+        });
+    </script>
+</body>
+</html>
